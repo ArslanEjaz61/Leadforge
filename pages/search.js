@@ -36,7 +36,7 @@ function statusColor(status) {
 export default function Search({ activity }) {
   const [running, setRunning] = useState(false);
   const [lastMessage, setLastMessage] = useState(null);
-  const [searchKeywords, setSearchKeywords] = useState('startup founder AI automation');
+  const [searchKeywords, setSearchKeywords] = useState('');
 
   async function runSearch() {
     setRunning(true);
