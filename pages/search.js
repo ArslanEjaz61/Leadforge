@@ -53,7 +53,7 @@ export default function Search({ activity }) {
     for (const stage of STAGES) {
       setStatus((s) => ({ ...s, [stage.key]: 'running' }));
       try {
-        const body = stage.key === 'search' ? { keywords: searchKeywords, limit: 10 } : {};
+        const body = stage.key === 'search' ? { keywords: searchKeywords, limit: 25 } : {};
         const r = await fetch(`/api/trigger/${stage.endpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -111,7 +111,7 @@ export default function Search({ activity }) {
           Try: "AI agent developer", "n8n automation consultant", "DevOps engineer hiring", "full stack MERN developer"
         </div>
         <div className="stat-note" style={{ marginTop: 10 }}>
-          One click does it all — search → AI-qualify → fetch posts → draft comments. Takes 1-3 minutes. Then just review &amp; approve.
+          One click does it all — search → AI-qualify → fetch posts → draft comments (up to 25 leads). Takes 2-5 minutes. Then just review &amp; approve.
         </div>
       </div>
 
