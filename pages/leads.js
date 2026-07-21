@@ -10,7 +10,6 @@ export async function getServerSideProps() {
       .from('leads')
       .select('id,full_name,headline,company,industry,icp_score,status,posts_fetched,comments_posted_count,linkedin_profile_url,created_at')
       .in('status', ['qualified', 'engaged', 'connected'])
-      .order('icp_score', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(100),
     supabase.from('leads').select('*', { count: 'exact', head: true }).eq('status', 'raw'),
