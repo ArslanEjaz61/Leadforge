@@ -10,7 +10,7 @@ const TOUR_STEPS = [
   {
     selector: '#tour-pipeline-buttons',
     title: 'Step 4 — Draft & Post',
-    description: '"Evaluate & Draft Comments" has the AI read fetched posts and write comment drafts. "Post Approved Comments" sends whatever you\'ve approved live to LinkedIn.',
+    description: '"Evaluate & Draft Comments" has the AI read fetched posts and write comment drafts. (The one-click Search on the previous page already does this for you.)',
   },
   {
     selector: '#tour-tabs',
@@ -25,7 +25,7 @@ const TOUR_STEPS = [
   {
     selector: '#tour-comment-actions',
     title: 'Approve or Reject',
-    description: 'Like the comment? Approve it — it\'ll go out next time "Post Approved Comments" runs. Don\'t like it? Reject it.',
+    description: 'Like the comment? Click "Approve & Post" — it posts to LinkedIn immediately. Don\'t like it? Reject it.',
   },
 ];
 
@@ -57,7 +57,6 @@ function postUrl(c) {
 
 const PIPELINE_ACTIONS = [
   { key: 'evaluate', label: 'Evaluate & Draft Comments' },
-  { key: 'post-comments', label: 'Post Approved Comments' },
 ];
 
 export default function CommentsReview({ comments, tab }) {
@@ -75,14 +74,18 @@ export default function CommentsReview({ comments, tab }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
       });
-      if (!r.ok) throw new Error('Request failed');
-      const label = action === 'approve' ? 'Approved ✓' : 'Rejected';
-      setMessage(`${label} — ${leadName || 'lead'}'s comment${action === 'approve' ? '. It will post next time you run “Post Approved Comments”.' : '.'}`);
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Request failed');
+      if (action === 'approve') {
+        setMessage(`${leadName ? leadName + ': ' : ''}${d.message || 'Comment posted to LinkedIn ✓'}`);
+      } else {
+        setMessage(`Rejected — ${leadName || 'lead'}'s comment.`);
+      }
     } catch (e) {
       setMessage('Could not update comment: ' + String(e.message || e));
     } finally {
       setBusyId(null);
-      setTimeout(() => router.replace(router.asPath), 900);
+      setTimeout(() => router.replace(router.asPath), 1200);
     }
   }
 
@@ -152,7 +155,7 @@ export default function CommentsReview({ comments, tab }) {
             {c.status === 'pending' ? (
               <div id={i === 0 ? 'tour-comment-actions' : undefined} className="comment-actions" style={{ margin: 0 }}>
                 <button className="btn btn-green btn-sm" disabled={busyId === c.id} onClick={() => act(c.id, 'approve', c.leads?.full_name)}>
-                  {busyId === c.id ? 'Saving…' : 'Approve'}
+                  {busyId === c.id ? 'Posting…' : 'Approve & Post'}
                 </button>
                 <button className="btn btn-red btn-sm" disabled={busyId === c.id} onClick={() => act(c.id, 'reject', c.leads?.full_name)}>Reject</button>
               </div>
