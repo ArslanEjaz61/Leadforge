@@ -29,7 +29,7 @@ export async function getServerSideProps() {
     supabase.from('posts').select('*', { count: 'exact', head: true }).eq('status', 'commented'),
     supabase
       .from('posts')
-      .select('id,content,ai_score,flagged_for_comment,status,fetched_at,leads(full_name)')
+      .select('id,content,ai_score,flagged_for_comment,status,fetched_at,raw_data,leads(full_name)')
       .order('fetched_at', { ascending: false })
       .limit(50),
   ]);
@@ -97,16 +97,16 @@ export default function Posts({ total, flagged, withComments, posts }) {
       <div id="tour-posts-table" className="card">
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Lead</th><th>Post</th><th>AI Score</th><th>Flagged</th><th>Status</th><th>Fetched</th></tr></thead>
+            <thead><tr><th>Lead</th><th>Post</th><th>Posted</th><th>AI Score</th><th>Flagged</th><th>Status</th></tr></thead>
             <tbody>
               {posts.map((p) => (
                 <tr key={p.id}>
                   <td><strong>{p.leads?.full_name || '—'}</strong></td>
                   <td style={{ maxWidth: 380 }}>{(p.content || '').slice(0, 140)}{(p.content || '').length > 140 ? '…' : ''}</td>
+                  <td className="stat-note">{p.raw_data?.date ? `${p.raw_data.date} ago` : '—'}</td>
                   <td>{p.ai_score ?? '—'}</td>
                   <td>{p.flagged_for_comment ? <span className="pill pill-green">Yes</span> : <span className="pill pill-gray">No</span>}</td>
                   <td><span className="pill pill-blue">{p.status}</span></td>
-                  <td className="stat-note">{timeAgo(p.fetched_at)}</td>
                 </tr>
               ))}
               {posts.length === 0 && <tr><td colSpan={6}><div className="empty-state">No posts fetched yet — click "Fetch Posts" above.</div></td></tr>}
