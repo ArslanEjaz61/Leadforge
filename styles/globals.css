@@ -140,6 +140,9 @@ button { font-family: inherit; cursor: pointer; }
 .stepper-step.active .stepper-label { color: var(--text-primary); }
 .stepper-step.done .stepper-dot { background: var(--green); border-color: var(--green); color: white; }
 .stepper-line { flex: 1; height: 2px; background: var(--border-strong); margin: 0 10px; }
+
+.spin { display: inline-block; animation: pulseFade 1s ease-in-out infinite; }
+@keyframes pulseFade { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 .sidebar-link.active { background: var(--bg-sidebar-active); color: #cdc3ff; }
 .sidebar-link-icon { width: 16px; text-align: center; flex-shrink: 0; }
 
