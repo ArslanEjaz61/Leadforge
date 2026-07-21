@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 const PATH_TO_TOUR = {
   '/': 'dashboard',
+  '/search': 'search',
   '/comments': 'comments',
   '/leads': 'leads',
   '/posts': 'posts',
@@ -14,17 +15,13 @@ const PATH_TO_TOUR = {
 const NAV = [
   { section: 'Overview', links: [{ href: '/', label: 'Dashboard', icon: '◧' }] },
   {
-    section: 'Daily Ops',
+    section: 'Pipeline',
     links: [
-      { href: '/comments', label: 'Comments Review', icon: '💬' },
-      { href: '/leads', label: 'Qualified Leads', icon: '👤' },
-    ],
-  },
-  {
-    section: 'Data',
-    links: [
-      { href: '/posts', label: 'Posts', icon: '📄' },
-      { href: '/replies', label: 'Replies', icon: '↩' },
+      { href: '/search', label: '1. Search', icon: '🔎' },
+      { href: '/leads', label: '2. Qualify', icon: '👤' },
+      { href: '/posts', label: '3. Fetch Posts', icon: '📄' },
+      { href: '/comments', label: '4. Draft & Review', icon: '💬' },
+      { href: '/replies', label: '5. Replies', icon: '↩' },
     ],
   },
   { section: 'Reports', links: [{ href: '/analytics', label: 'Analytics', icon: '📊' }] },

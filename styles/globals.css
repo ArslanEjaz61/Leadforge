@@ -122,6 +122,24 @@ button { font-family: inherit; cursor: pointer; }
   transition: background 0.12s, color 0.12s;
 }
 .sidebar-link:hover { background: var(--bg-sidebar-hover); color: var(--text-inverse); }
+
+.stepper { display: flex; align-items: center; margin-bottom: 22px; }
+.stepper-item { display: flex; align-items: center; flex: 1; }
+.stepper-item:last-child { flex: 0; }
+.stepper-step { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.stepper-dot {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  background: var(--gray-soft); color: var(--text-secondary);
+  border: 2px solid var(--border-strong);
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.stepper-label { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+.stepper-step.active .stepper-dot { background: var(--accent); border-color: var(--accent); color: white; }
+.stepper-step.active .stepper-label { color: var(--text-primary); }
+.stepper-step.done .stepper-dot { background: var(--green); border-color: var(--green); color: white; }
+.stepper-line { flex: 1; height: 2px; background: var(--border-strong); margin: 0 10px; }
 .sidebar-link.active { background: var(--bg-sidebar-active); color: #cdc3ff; }
 .sidebar-link-icon { width: 16px; text-align: center; flex-shrink: 0; }
 

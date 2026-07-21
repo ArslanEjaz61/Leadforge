@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { formatDateTime } from '../lib/format';
 import TourGuide from '../components/TourGuide';
@@ -10,21 +9,6 @@ const TOUR_STEPS = [
     description: 'These 4 cards give you an instant snapshot: total leads, how many are qualified, how many comments are waiting for review, and how many comments have been posted today.',
   },
   {
-    selector: '#tour-search-box',
-    title: 'Search LinkedIn for New Leads',
-    description: 'Type in any keyword (e.g. "AI agency owner" or "CTO looking for developer"). As soon as the search runs, the new leads are automatically AI-qualified too — no extra step needed.',
-  },
-  {
-    selector: '#tour-qualify-btn',
-    title: 'Qualify Raw Leads',
-    description: 'If a large batch of leads ever comes in at once and not all of them get auto-qualified, use this button to qualify whatever is still left as "raw".',
-  },
-  {
-    selector: '#tour-pipeline-actions',
-    title: 'Run Pipeline Steps',
-    description: 'These are the rest of the automation steps: fetching posts, having the AI draft comments, posting approved comments to LinkedIn, and checking for replies.',
-  },
-  {
     selector: '#tour-recent-activity',
     title: 'Recent Activity',
     description: 'A live log of every action the system takes — what happened, for which lead, and when.',
@@ -32,7 +16,7 @@ const TOUR_STEPS = [
   {
     selector: '#tour-sidebar',
     title: 'Navigation',
-    description: 'Use the sidebar to jump to Comments Review, Qualified Leads, Posts, Analytics, Replies, and Settings. Each page shows a similar guide the first time you visit it.',
+    description: 'The sidebar is numbered in pipeline order: 1. Search, 2. Qualify, 3. Fetch Posts, 4. Draft & Review, 5. Replies. Follow it top to bottom to run the whole automation step by step.',
   },
 ];
 
@@ -73,14 +57,6 @@ export async function getServerSideProps() {
   };
 }
 
-const ACTIONS = [
-  { key: 'qualify', label: 'Qualify Raw Leads' },
-  { key: 'fetch-posts', label: 'Fetch Posts' },
-  { key: 'evaluate', label: 'Evaluate & Draft Comments' },
-  { key: 'post-comments', label: 'Post Approved Comments' },
-  { key: 'detect-replies', label: 'Check for Replies' },
-];
-
 function statusColor(status) {
   if (status === 'success') return 'pill-green';
   if (status === 'failed') return 'pill-red';
@@ -88,33 +64,6 @@ function statusColor(status) {
 }
 
 export default function Dashboard({ totalLeads, qualifiedCount, pendingCount, postedToday, settings, activity, rawCount, engagedCount, disqualifiedCount }) {
-  const [running, setRunning] = useState(null);
-  const [lastMessage, setLastMessage] = useState(null);
-  const [searchKeywords, setSearchKeywords] = useState('startup founder AI automation');
-
-  async function runAction(action, bodyOverride) {
-    setRunning(action.key);
-    setLastMessage(null);
-    try {
-      const r = await fetch(`/api/trigger/${action.key}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyOverride || action.body || {}),
-      });
-      const data = await r.json();
-      setLastMessage(data.message || (data.ok ? 'Done' : 'Something went wrong'));
-    } catch (e) {
-      setLastMessage('Error: ' + String(e));
-    } finally {
-      setRunning(null);
-      setTimeout(() => window.location.reload(), 1200);
-    }
-  }
-
-  function runSearch() {
-    runAction({ key: 'search' }, { keywords: searchKeywords, limit: 10 });
-  }
-
   const qualRate = totalLeads > 0 ? Math.round((qualifiedCount / totalLeads) * 100) : 0;
   const dailyCap = settings.daily_comment_cap ?? 5;
 
@@ -123,10 +72,8 @@ export default function Dashboard({ totalLeads, qualifiedCount, pendingCount, po
       <TourGuide tourId="dashboard" steps={TOUR_STEPS} />
       <div className="page-header">
         <div className="page-title">Dashboard</div>
-        <div className="page-subtitle">LinkedIn outreach pipeline overview</div>
+        <div className="page-subtitle">LinkedIn outreach pipeline overview — head to Search in the sidebar to run the pipeline</div>
       </div>
-
-      {lastMessage && <div className="toast-banner pill-blue" style={{ display: 'block' }}>{lastMessage}</div>}
 
       <div id="tour-stats" className="grid grid-4" style={{ marginBottom: 16 }}>
         <div className="card">
@@ -152,44 +99,9 @@ export default function Dashboard({ totalLeads, qualifiedCount, pendingCount, po
       </div>
 
       <div className="grid grid-2">
-        <div className="card">
-          <div id="tour-search-box">
-          <div className="card-title">Search LinkedIn for New Leads</div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-            <input
-              className="field-input"
-              style={{ maxWidth: 320, flex: 1 }}
-              value={searchKeywords}
-              onChange={(e) => setSearchKeywords(e.target.value)}
-              placeholder="e.g. CTO looking for MERN developer"
-            />
-            <button className="btn btn-primary btn-sm" disabled={running !== null || !searchKeywords.trim()} onClick={runSearch}>
-              {running === 'search' ? 'Searching…' : 'Search'}
-            </button>
-          </div>
-          <div className="stat-note" style={{ marginBottom: 18 }}>
-            Try: "AI agent developer", "n8n automation consultant", "DevOps engineer hiring", "full stack MERN developer"
-          </div>
-          </div>
-
-          <div className="card-title">Run Pipeline Steps</div>
-          <div id="tour-pipeline-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-            {ACTIONS.map((a) => (
-              <button
-                key={a.key}
-                id={a.key === 'qualify' ? 'tour-qualify-btn' : undefined}
-                className="btn btn-primary btn-sm"
-                disabled={running !== null}
-                onClick={() => runAction(a)}
-              >
-                {running === a.key ? 'Running…' : a.label}
-              </button>
-            ))}
-          </div>
-
-          <div id="tour-recent-activity">
-          <div className="card-title" style={{ marginTop: 24 }}>Recent Activity</div>
-          {activity.length === 0 && <div className="empty-state">No activity yet — run a pipeline step above.</div>}
+        <div id="tour-recent-activity" className="card">
+          <div className="card-title">Recent Activity</div>
+          {activity.length === 0 && <div className="empty-state">No activity yet — head to Search in the sidebar to start the pipeline.</div>}
           {activity.map((a) => (
             <div key={a.id} className="activity-row">
               <div className={`activity-dot ${a.status === 'success' ? 'pill-green' : a.status === 'failed' ? 'pill-red' : 'pill-amber'}`} style={{ background: 'currentColor' }} />
@@ -203,7 +115,6 @@ export default function Dashboard({ totalLeads, qualifiedCount, pendingCount, po
               <div className="stat-note">{formatDateTime(a.created_at)}</div>
             </div>
           ))}
-          </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

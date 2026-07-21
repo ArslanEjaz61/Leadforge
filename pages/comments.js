@@ -2,10 +2,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import TourGuide from '../components/TourGuide';
+import PipelineStepper from '../components/PipelineStepper';
 
 const TABS = ['all', 'pending', 'approved', 'posted', 'rejected'];
 
 const TOUR_STEPS = [
+  {
+    selector: '#tour-pipeline-buttons',
+    title: 'Step 4 — Draft & Post',
+    description: '"Evaluate & Draft Comments" has the AI read fetched posts and write comment drafts. "Post Approved Comments" sends whatever you\'ve approved live to LinkedIn.',
+  },
   {
     selector: '#tour-tabs',
     title: 'Filter by Status',
@@ -19,7 +25,7 @@ const TOUR_STEPS = [
   {
     selector: '#tour-comment-actions',
     title: 'Approve or Reject',
-    description: 'Like the comment? Approve it — it\'ll go out next time you run "Post Approved Comments". Don\'t like it? Reject it.',
+    description: 'Like the comment? Approve it — it\'ll go out next time "Post Approved Comments" runs. Don\'t like it? Reject it.',
   },
 ];
 
@@ -39,9 +45,16 @@ function pillClass(status) {
   return { pending: 'pill-amber', approved: 'pill-blue', posted: 'pill-green', rejected: 'pill-red', failed: 'pill-red' }[status] || 'pill-gray';
 }
 
+const PIPELINE_ACTIONS = [
+  { key: 'evaluate', label: 'Evaluate & Draft Comments' },
+  { key: 'post-comments', label: 'Post Approved Comments' },
+];
+
 export default function CommentsReview({ comments, tab }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState(null);
+  const [running, setRunning] = useState(null);
+  const [message, setMessage] = useState(null);
 
   async function act(id, action) {
     setBusyId(id);
@@ -54,12 +67,39 @@ export default function CommentsReview({ comments, tab }) {
     router.replace(router.asPath);
   }
 
+  async function runPipelineAction(action) {
+    setRunning(action.key);
+    setMessage(null);
+    try {
+      const r = await fetch(`/api/trigger/${action.key}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await r.json();
+      setMessage(data.message || (data.ok ? 'Done' : 'Something went wrong'));
+    } catch (e) {
+      setMessage('Error: ' + String(e));
+    } finally {
+      setRunning(null);
+      setTimeout(() => router.replace(router.asPath), 1000);
+    }
+  }
+
   return (
     <div>
       <TourGuide tourId="comments" steps={TOUR_STEPS} />
       <div className="page-header">
         <div className="page-title">Comments Review</div>
-        <div className="page-subtitle">Review, tweak, and approve AI-drafted comments before they go live</div>
+        <div className="page-subtitle">Step 4 of the pipeline — draft, review, and post AI comments</div>
+      </div>
+
+      <PipelineStepper current={4} />
+
+      {message && <div className="toast-banner pill-blue" style={{ display: 'block', marginBottom: 16 }}>{message}</div>}
+
+      <div id="tour-pipeline-buttons" className="card" style={{ marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {PIPELINE_ACTIONS.map((a) => (
+          <button key={a.key} className="btn btn-primary btn-sm" disabled={running !== null} onClick={() => runPipelineAction(a)}>
+            {running === a.key ? 'Running…' : a.label}
+          </button>
+        ))}
       </div>
 
       <div id="tour-tabs" className="tabs">

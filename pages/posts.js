@@ -1,7 +1,15 @@
+import { useState } from 'react';
+import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import TourGuide from '../components/TourGuide';
+import PipelineStepper from '../components/PipelineStepper';
 
 const TOUR_STEPS = [
+  {
+    selector: '#tour-fetch-btn',
+    title: 'Step 3 — Fetch Posts',
+    description: 'Pulls recent LinkedIn posts for every qualified lead, so the AI has something real to comment on.',
+  },
   {
     selector: '#tour-post-stats',
     title: 'Post Metrics',
@@ -38,12 +46,45 @@ function timeAgo(iso) {
 }
 
 export default function Posts({ total, flagged, withComments, posts }) {
+  const router = useRouter();
+  const [running, setRunning] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  async function fetchPosts() {
+    setRunning(true);
+    setMessage(null);
+    try {
+      const r = await fetch('/api/trigger/fetch-posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await r.json();
+      setMessage(data.message || (data.ok ? 'Done' : 'Something went wrong'));
+    } catch (e) {
+      setMessage('Error: ' + String(e));
+    } finally {
+      setRunning(false);
+      setTimeout(() => router.replace(router.asPath), 1000);
+    }
+  }
+
   return (
     <div>
       <TourGuide tourId="posts" steps={TOUR_STEPS} />
       <div className="page-header">
         <div className="page-title">Posts</div>
-        <div className="page-subtitle">LinkedIn posts fetched from qualified leads</div>
+        <div className="page-subtitle">Step 3 of the pipeline — LinkedIn posts fetched from qualified leads</div>
+      </div>
+
+      <PipelineStepper current={3} />
+
+      {message && <div className="toast-banner pill-blue" style={{ display: 'block', marginBottom: 16 }}>{message}</div>}
+
+      <div className="card" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div className="card-title" style={{ marginBottom: 4 }}>Fetch Posts for Qualified Leads</div>
+          <div className="stat-note">Pulls recent LinkedIn posts so the AI has real content to comment on.</div>
+        </div>
+        <button id="tour-fetch-btn" className="btn btn-primary btn-sm" disabled={running} onClick={fetchPosts}>
+          {running ? 'Fetching…' : 'Fetch Posts'}
+        </button>
       </div>
 
       <div id="tour-post-stats" className="grid grid-4" style={{ marginBottom: 20 }}>
@@ -68,7 +109,7 @@ export default function Posts({ total, flagged, withComments, posts }) {
                   <td className="stat-note">{timeAgo(p.fetched_at)}</td>
                 </tr>
               ))}
-              {posts.length === 0 && <tr><td colSpan={6}><div className="empty-state">No posts fetched yet.</div></td></tr>}
+              {posts.length === 0 && <tr><td colSpan={6}><div className="empty-state">No posts fetched yet — click "Fetch Posts" above.</div></td></tr>}
             </tbody>
           </table>
         </div>

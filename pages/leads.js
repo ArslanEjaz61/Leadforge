@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import TourGuide from '../components/TourGuide';
+import PipelineStepper from '../components/PipelineStepper';
 
 export async function getServerSideProps() {
   const [{ data: leads }, { count: rawCount }] = await Promise.all([
@@ -68,8 +69,10 @@ export default function QualifiedLeads({ leads, byScore, byIndustry, rawCount })
       <TourGuide tourId="leads" steps={TOUR_STEPS} />
       <div className="page-header">
         <div className="page-title">Qualified Leads</div>
-        <div className="page-subtitle">Leads that passed ICP qualification</div>
+        <div className="page-subtitle">Step 2 of the pipeline — leads that passed ICP qualification</div>
       </div>
+
+      <PipelineStepper current={2} />
 
       {rawCount > 0 && (
         <div id="tour-raw-banner" className="card" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
