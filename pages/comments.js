@@ -33,7 +33,7 @@ export async function getServerSideProps({ query }) {
   const tab = TABS.includes(query.tab) ? query.tab : 'pending';
   let q = supabase
     .from('comments')
-    .select('id,drafted_text,edited_text,outreach_hook,status,failure_reason,created_at,leads(full_name,industry),posts(content)')
+    .select('id,drafted_text,edited_text,outreach_hook,status,failure_reason,created_at,leads(full_name,industry,linkedin_profile_url),posts(content,linkedin_post_urn)')
     .order('created_at', { ascending: false })
     .limit(50);
   if (tab !== 'all') q = q.eq('status', tab);
@@ -43,6 +43,16 @@ export async function getServerSideProps({ query }) {
 
 function pillClass(status) {
   return { pending: 'pill-amber', approved: 'pill-blue', posted: 'pill-green', rejected: 'pill-red', failed: 'pill-red' }[status] || 'pill-gray';
+}
+
+// Build a viewable LinkedIn URL from a stored post URN (urn:li:activity:… / urn:li:ugcPost:…)
+function postUrl(c) {
+  const urn = c.posts?.linkedin_post_urn;
+  if (urn) {
+    const clean = urn.startsWith('urn:li:') ? urn : `urn:li:activity:${urn}`;
+    return `https://www.linkedin.com/feed/update/${clean}`;
+  }
+  return c.leads?.linkedin_profile_url || null; // fallback: the lead's profile
 }
 
 const PIPELINE_ACTIONS = [
@@ -56,15 +66,24 @@ export default function CommentsReview({ comments, tab }) {
   const [running, setRunning] = useState(null);
   const [message, setMessage] = useState(null);
 
-  async function act(id, action) {
+  async function act(id, action, leadName) {
     setBusyId(id);
-    await fetch(`/api/comments/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action }),
-    });
-    setBusyId(null);
-    router.replace(router.asPath);
+    setMessage(null);
+    try {
+      const r = await fetch(`/api/comments/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      if (!r.ok) throw new Error('Request failed');
+      const label = action === 'approve' ? 'Approved ✓' : 'Rejected';
+      setMessage(`${label} — ${leadName || 'lead'}'s comment${action === 'approve' ? '. It will post next time you run “Post Approved Comments”.' : '.'}`);
+    } catch (e) {
+      setMessage('Could not update comment: ' + String(e.message || e));
+    } finally {
+      setBusyId(null);
+      setTimeout(() => router.replace(router.asPath), 900);
+    }
   }
 
   async function runPipelineAction(action) {
@@ -92,7 +111,7 @@ export default function CommentsReview({ comments, tab }) {
 
       <PipelineStepper current={4} />
 
-      {message && <div className="toast-banner pill-blue" style={{ display: 'block', marginBottom: 16 }}>{message}</div>}
+      {message && <div className={`toast-banner ${message.includes('✓') ? 'pill-green' : message.startsWith('Could not') ? 'pill-red' : 'pill-blue'}`} style={{ display: 'block', marginBottom: 16 }}>{message}</div>}
 
       <div id="tour-pipeline-buttons" className="card" style={{ marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {PIPELINE_ACTIONS.map((a) => (
@@ -129,12 +148,21 @@ export default function CommentsReview({ comments, tab }) {
 
           {c.failure_reason && <div className="stat-note" style={{ color: 'var(--red)' }}>Failed: {c.failure_reason}</div>}
 
-          {c.status === 'pending' && (
-            <div id={i === 0 ? 'tour-comment-actions' : undefined} className="comment-actions">
-              <button className="btn btn-green btn-sm" disabled={busyId === c.id} onClick={() => act(c.id, 'approve')}>Approve</button>
-              <button className="btn btn-red btn-sm" disabled={busyId === c.id} onClick={() => act(c.id, 'reject')}>Reject</button>
-            </div>
-          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, gap: 12, flexWrap: 'wrap' }}>
+            {c.status === 'pending' ? (
+              <div id={i === 0 ? 'tour-comment-actions' : undefined} className="comment-actions" style={{ margin: 0 }}>
+                <button className="btn btn-green btn-sm" disabled={busyId === c.id} onClick={() => act(c.id, 'approve', c.leads?.full_name)}>
+                  {busyId === c.id ? 'Saving…' : 'Approve'}
+                </button>
+                <button className="btn btn-red btn-sm" disabled={busyId === c.id} onClick={() => act(c.id, 'reject', c.leads?.full_name)}>Reject</button>
+              </div>
+            ) : <span />}
+            {postUrl(c) && (
+              <a href={postUrl(c)} target="_blank" rel="noreferrer" className="btn btn-sm" style={{ textDecoration: 'none' }}>
+                {c.status === 'posted' ? 'View posted comment on LinkedIn ↗' : 'View post on LinkedIn ↗'}
+              </a>
+            )}
+          </div>
         </div>
       ))}
     </div>
